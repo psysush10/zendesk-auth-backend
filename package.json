@@ -2,6 +2,7 @@
     "name": "zendesk-auth-backend",
     "version": "1.0.0",
     "type": "module",
+    "main": "api/token.js",
     "dependencies": {
         "jsonwebtoken": "^9.0.0"
     }
