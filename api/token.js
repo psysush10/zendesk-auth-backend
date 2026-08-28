@@ -1,34 +1,31 @@
-import jwt from 'jsonwebtoken';
+const jwt = require('jsonwebtoken');
 
-export default async function handler(req) {
-  // CORS Headers
-  const headers = {
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json'
-  };
+module.exports = (req, res) => {
+  // 1. Set explicit CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/json');
 
-  // Handle preflight OPTIONS request
+  // 2. Handle preflight request immediately
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers });
-  }
-
-  const KEY_ID = process.env.ZENDESK_KEY_ID;
-  const SHARED_SECRET = process.env.ZENDESK_SHARED_SECRET;
-
-  if (!KEY_ID || !SHARED_SECRET) {
-    return new Response(
-      JSON.stringify({ 
-        error: 'Missing Environment Variables',
-        details: 'Check ZENDESK_KEY_ID and ZENDESK_SHARED_SECRET in Vercel settings.' 
-      }),
-      { status: 500, headers }
-    );
+    res.statusCode = 200;
+    return res.end();
   }
 
   try {
+    const KEY_ID = process.env.ZENDESK_KEY_ID;
+    const SHARED_SECRET = process.env.ZENDESK_SHARED_SECRET;
+
+    if (!KEY_ID || !SHARED_SECRET) {
+      res.statusCode = 500;
+      return res.end(JSON.stringify({ 
+        error: 'Missing Environment Variables',
+        details: 'Ensure ZENDESK_KEY_ID and ZENDESK_SHARED_SECRET are set in Vercel settings.' 
+      }));
+    }
+
     const payload = {
       scope: 'user',
       external_id: 'chennai_customer_prod_99',
@@ -43,14 +40,12 @@ export default async function handler(req) {
       header: { alg: 'HS256', typ: 'JWT', kid: KEY_ID }
     });
 
-    return new Response(
-      JSON.stringify({ token: token }),
-      { status: 200, headers }
-    );
+    // 3. Explicitly terminate the connection with status code and body
+    res.statusCode = 200;
+    return res.end(JSON.stringify({ token: token }));
+
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers }
-    );
+    res.statusCode = 500;
+    return res.end(JSON.stringify({ error: err.message }));
   }
-}
+};
