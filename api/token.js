@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -21,17 +21,41 @@ module.exports = (req, res) => {
       return res.end(JSON.stringify({ error: 'Missing environment variables on Vercel' }));
     }
 
-    // Parse incoming request body for custom credentials
-    let body = {};
-    try {
-      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-    } catch (e) {
-      body = {};
+    // --- RELIABLE BODY PARSING ---
+    let body = req.body;
+
+    // Handle stringified bodies
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        body = {};
+      }
     }
 
-    const username = body.username || 'Anonymous User';
-    const email = body.email || `${username.toLowerCase().replace(/\s+/g, '')}@example.com`;
-    const externalId = `user_${username.toLowerCase().replace(/\s+/g, '_')}`;
+    // Handle unparsed stream buffers if body is missing
+    if (!body && req.readable) {
+      const buffers = [];
+      for await (const chunk of req) {
+        buffers.push(chunk);
+      }
+      const data = Buffer.concat(buffers).toString();
+      try {
+        body = JSON.parse(data);
+      } catch (e) {
+        body = {};
+      }
+    }
+
+    body = body || {};
+
+    // Extract submitted values with clean fallbacks
+    const rawName = body.username ? body.username.trim() : 'Test User';
+    const cleanId = rawName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    
+    const username = rawName;
+    const email = body.email || `${cleanId}@example.com`;
+    const externalId = `usr_${cleanId}_${Date.now()}`;
 
     // Construct JWT payload dynamically using submitted user data
     const payload = {
@@ -49,7 +73,10 @@ module.exports = (req, res) => {
     });
 
     res.statusCode = 200;
-    return res.end(JSON.stringify({ token: token, user: { name: username, email: email } }));
+    return res.end(JSON.stringify({ 
+      token: token, 
+      user: { name: username, email: email } 
+    }));
 
   } catch (err) {
     res.statusCode = 500;
