@@ -1,41 +1,56 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-module.exports = async (req, res) => {
-  // Enable CORS so your GitHub Pages site can fetch this endpoint
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+export default async function handler(req) {
+  // CORS Headers
+  const headers = {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json'
+  };
 
+  // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return new Response(null, { status: 200, headers });
   }
 
-  // Retrieve environment variables safely on the server side
   const KEY_ID = process.env.ZENDESK_KEY_ID;
   const SHARED_SECRET = process.env.ZENDESK_SHARED_SECRET;
 
   if (!KEY_ID || !SHARED_SECRET) {
-    return res.status(500).json({ error: 'Server misconfiguration: missing keys' });
+    return new Response(
+      JSON.stringify({ 
+        error: 'Missing Environment Variables',
+        details: 'Check ZENDESK_KEY_ID and ZENDESK_SHARED_SECRET in Vercel settings.' 
+      }),
+      { status: 500, headers }
+    );
   }
 
-  // Simulate authenticated user profile from your database/session
-  const payload = {
-    scope: 'user',
-    external_id: 'chennai_customer_prod_99',
-    email: 'sushanth.production@example.com',
-    email_verified: true,
-    name: 'Sushanth (Production Auth Flow)',
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (5 * 60) // Short-lived token (5 mins)
-  };
+  try {
+    const payload = {
+      scope: 'user',
+      external_id: 'chennai_customer_prod_99',
+      email: 'sushanth.production@example.com',
+      email_verified: true,
+      name: 'Sushanth (Production Auth Flow)',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (5 * 60)
+    };
 
-  const token = jwt.sign(payload, SHARED_SECRET, {
-    header: { alg: 'HS256', typ: 'JWT', kid: KEY_ID }
-  });
+    const token = jwt.sign(payload, SHARED_SECRET, {
+      header: { alg: 'HS256', typ: 'JWT', kid: KEY_ID }
+    });
 
-  // Return non-cached JSON response containing the signed token
-  res.setHeader('Cache-Control', 'no-store');
-  res.status(200).json({ token });
-};
+    return new Response(
+      JSON.stringify({ token: token }),
+      { status: 200, headers }
+    );
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      { status: 500, headers }
+    );
+  }
+}
