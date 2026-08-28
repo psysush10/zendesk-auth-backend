@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
     
     const username = rawName;
     const email = body.email || `${cleanId}@example.com`;
-    const externalId = `usr_${cleanId}_${Date.now()}`;
+    const externalId = `usr_${cleanId}`;
 
     // Construct JWT payload dynamically using submitted user data
     const payload = {
