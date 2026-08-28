@@ -1,14 +1,12 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res) => {
-  // 1. Set explicit CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/json');
 
-  // 2. Handle preflight request immediately
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     return res.end();
@@ -20,18 +18,28 @@ module.exports = (req, res) => {
 
     if (!KEY_ID || !SHARED_SECRET) {
       res.statusCode = 500;
-      return res.end(JSON.stringify({ 
-        error: 'Missing Environment Variables',
-        details: 'Ensure ZENDESK_KEY_ID and ZENDESK_SHARED_SECRET are set in Vercel settings.' 
-      }));
+      return res.end(JSON.stringify({ error: 'Missing environment variables on Vercel' }));
     }
 
+    // Parse incoming request body for custom credentials
+    let body = {};
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    } catch (e) {
+      body = {};
+    }
+
+    const username = body.username || 'Anonymous User';
+    const email = body.email || `${username.toLowerCase().replace(/\s+/g, '')}@example.com`;
+    const externalId = `user_${username.toLowerCase().replace(/\s+/g, '_')}`;
+
+    // Construct JWT payload dynamically using submitted user data
     const payload = {
       scope: 'user',
-      external_id: 'chennai_customer_prod_99',
-      email: 'sushanth.production@example.com',
+      external_id: externalId,
+      email: email,
       email_verified: true,
-      name: 'Sushanth (Production Auth Flow)',
+      name: username,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (5 * 60)
     };
@@ -40,9 +48,8 @@ module.exports = (req, res) => {
       header: { alg: 'HS256', typ: 'JWT', kid: KEY_ID }
     });
 
-    // 3. Explicitly terminate the connection with status code and body
     res.statusCode = 200;
-    return res.end(JSON.stringify({ token: token }));
+    return res.end(JSON.stringify({ token: token, user: { name: username, email: email } }));
 
   } catch (err) {
     res.statusCode = 500;
