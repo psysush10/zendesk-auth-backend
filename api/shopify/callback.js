@@ -31,30 +31,42 @@ export default async function handler(req, res) {
       });
     }
 
-    // 1. Exchange Shopify authorization code for access token
-    const tokenResponse = await fetch(
-      "https://shopify.com/authentication/75827249230/oauth/token",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          client_id: process.env.SHOPIFY_CLIENT_ID,
-          client_secret: process.env.SHOPIFY_CLIENT_SECRET,
-          redirect_uri,
-          code,
-          code_verifier
-        })
-      }
-    );
+    // --------------------------------------------------
+    // STEP 1: Exchange authorization code for access token
+    // --------------------------------------------------
+
+    let tokenResponse;
+
+    try {
+      tokenResponse = await fetch(
+        "https://shopify.com/authentication/75827249230/oauth/token",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: new URLSearchParams({
+            grant_type: "authorization_code",
+            client_id: process.env.SHOPIFY_CLIENT_ID,
+            client_secret: process.env.SHOPIFY_CLIENT_SECRET,
+            redirect_uri,
+            code,
+            code_verifier
+          })
+        }
+      );
+    } catch (error) {
+      return res.status(500).json({
+        error: "Shopify token endpoint fetch failed",
+        message: error.message,
+        cause: error.cause?.message || null,
+        code: error.cause?.code || null
+      });
+    }
 
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error("Shopify token exchange failed:", tokenData);
-
       return res.status(400).json({
         error: "Shopify token exchange failed",
         details: tokenData
@@ -69,45 +81,50 @@ export default async function handler(req, res) {
       });
     }
 
-    
+    // --------------------------------------------------
+    // STEP 2: Call Customer Account API
+    // --------------------------------------------------
 
-    // 2. Customer Account API endpoint
-const graphqlEndpoint =
-  "https://cookie-co-barxyhmr.myshopify.com/customer/api/2026-07/graphql";
-    
+    const graphqlEndpoint =
+      "https://cookie-co-barxyhmr.myshopify.com/customer/api/2026-07/graphql";
 
-    // 3. Retrieve the authenticated customer
-    console.log("STEP: Customer GraphQL");
-    const customerResponse = await fetch(graphqlEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": accessToken
-      },
-      body: JSON.stringify({
-        query: `
-          query {
-            customer {
-              id
-              firstName
-              lastName
-              emailAddress {
-                emailAddress
+    let customerResponse;
+
+    try {
+      customerResponse = await fetch(graphqlEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": accessToken
+        },
+        body: JSON.stringify({
+          query: `
+            query {
+              customer {
+                id
+                firstName
+                lastName
+                emailAddress {
+                  emailAddress
+                }
               }
             }
-          }
-        `
-      })
-    });
+          `
+        })
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: "Customer Account API fetch failed",
+        message: error.message,
+        cause: error.cause?.message || null,
+        code: error.cause?.code || null,
+        endpoint: graphqlEndpoint
+      });
+    }
 
     const customerData = await customerResponse.json();
 
     if (!customerResponse.ok || customerData.errors) {
-      console.error(
-        "Customer Account API request failed:",
-        customerData
-      );
-
       return res.status(400).json({
         error: "Customer Account API request failed",
         details: customerData
@@ -118,11 +135,15 @@ const graphqlEndpoint =
 
     if (!customer) {
       return res.status(400).json({
-        error: "Customer was not returned by Shopify"
+        error: "Customer was not returned by Shopify",
+        details: customerData
       });
     }
 
-    // 4. Temporary verification response
+    // --------------------------------------------------
+    // STEP 3: Temporary verification response
+    // --------------------------------------------------
+
     return res.status(200).json({
       success: true,
       state,
@@ -135,10 +156,11 @@ const graphqlEndpoint =
     });
 
   } catch (error) {
-    console.error("Shopify callback error:", error);
-
     return res.status(500).json({
-      error: "Internal server error"
+      error: "Unexpected callback error",
+      message: error.message,
+      cause: error.cause?.message || null,
+      code: error.cause?.code || null
     });
   }
 }
