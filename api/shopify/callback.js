@@ -129,7 +129,21 @@ try {
       });
     }
 
-    const customerData = await customerResponse.json();
+    const customerResponseText = await customerResponse.text();
+
+let customerData;
+
+try {
+  customerData = JSON.parse(customerResponseText);
+} catch (error) {
+  return res.status(500).json({
+    error: "Customer Account API returned non-JSON",
+    status: customerResponse.status,
+    statusText: customerResponse.statusText,
+    contentType: customerResponse.headers.get("content-type"),
+    responsePreview: customerResponseText.slice(0, 1000)
+  });
+}
 
     if (!customerResponse.ok || customerData.errors) {
       return res.status(400).json({
