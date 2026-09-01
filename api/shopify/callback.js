@@ -93,7 +93,7 @@ try {
     // --------------------------------------------------
 
     const graphqlEndpoint =
-      "https://cookie-co-barxyhmr.myshopify.com/customer/api/2026-07/graphql";
+      "https://shopify.com/75827249230/account/customer/api/2026-07/graphql";
 
     let customerResponse;
 
