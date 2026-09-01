@@ -64,14 +64,21 @@ export default async function handler(req, res) {
       });
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenResponseText = await tokenResponse.text();
 
-    if (!tokenResponse.ok) {
-      return res.status(400).json({
-        error: "Shopify token exchange failed",
-        details: tokenData
-      });
-    }
+let tokenData;
+
+try {
+  tokenData = JSON.parse(tokenResponseText);
+} catch (error) {
+  return res.status(500).json({
+    error: "Shopify token endpoint returned non-JSON",
+    status: tokenResponse.status,
+    statusText: tokenResponse.statusText,
+    contentType: tokenResponse.headers.get("content-type"),
+    responsePreview: tokenResponseText.slice(0, 1000)
+  });
+}
 
     const accessToken = tokenData.access_token;
 
