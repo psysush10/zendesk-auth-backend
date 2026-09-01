@@ -69,10 +69,14 @@ export default async function handler(req, res) {
       });
     }
 
+    
+
     // 2. Discover the Customer Account API endpoint
+    console.log("STEP: Customer API discovery");
     const discoveryResponse = await fetch(
       "https://cookie-co.barxyhmr.myshopify.com/.well-known/customer-account-api"
     );
+    console.log("STEP: Customer API discovery succeeded");
 
     const discoveryData = await discoveryResponse.json();
 
@@ -89,8 +93,10 @@ export default async function handler(req, res) {
     }
 
     const graphqlEndpoint = discoveryData.graphql_api;
+    
 
     // 3. Retrieve the authenticated customer
+    console.log("STEP: Customer GraphQL");
     const customerResponse = await fetch(graphqlEndpoint, {
       method: "POST",
       headers: {
