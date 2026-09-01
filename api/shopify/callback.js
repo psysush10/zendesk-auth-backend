@@ -71,28 +71,9 @@ export default async function handler(req, res) {
 
     
 
-    // 2. Discover the Customer Account API endpoint
-    console.log("STEP: Customer API discovery");
-    const discoveryResponse = await fetch(
-      "https://cookie-co.barxyhmr.myshopify.com/.well-known/customer-account-api"
-    );
-    console.log("STEP: Customer API discovery succeeded");
-
-    const discoveryData = await discoveryResponse.json();
-
-    if (!discoveryResponse.ok || !discoveryData.graphql_api) {
-      console.error(
-        "Customer Account API discovery failed:",
-        discoveryData
-      );
-
-      return res.status(500).json({
-        error: "Customer Account API discovery failed",
-        details: discoveryData
-      });
-    }
-
-    const graphqlEndpoint = discoveryData.graphql_api;
+    // 2. Customer Account API endpoint
+const graphqlEndpoint =
+  "https://cookie-co-barxyhmr.myshopify.com/customer/api/2026-07/graphql";
     
 
     // 3. Retrieve the authenticated customer
