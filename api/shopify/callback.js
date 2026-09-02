@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { createZendeskJWT } from "../../lib/zendesk/jwt.js";
 import { normalizeShopifyCustomer } from "../../lib/identity/shopify.js";
 import { createSessionData } from "../../lib/session/session.js";
 import { saveSession } from "../../lib/session/store.js";
@@ -183,10 +182,6 @@ try {
       `__Host-session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24}`
     );
 
-
-    // STEP 4: Generate Zendesk JWT
-
-    const token = createZendeskJWT(identity);
 
     return res.status(200).json({
       success: true,
