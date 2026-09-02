@@ -180,7 +180,7 @@ try {
 
     res.setHeader(
       "Set-Cookie",
-      `session_id=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24}`
+      `__Host-session=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24}`
     );
 
 
