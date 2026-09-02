@@ -1,5 +1,5 @@
-import { normalizeIdentity } from "../../lib/identity/normalize.js";
 import { createZendeskJWT } from "../../lib/zendesk/jwt.js";
+import { normalizeShopifyCustomer } from "../../lib/identity/shopify.js";
 
 export default async function handler(req, res) {
   res.setHeader(
@@ -163,21 +163,9 @@ try {
       });
     }
 
-        // STEP 3: Normalize Shopify identity
+     // STEP 3: Normalize Shopify identity
 
-    const email = customer.emailAddress?.emailAddress || null;
-
-    const name = [customer.firstName, customer.lastName]
-      .filter(Boolean)
-      .join(" ") || email;
-
-    const identity = normalizeIdentity({
-      externalId: `shopify_${customer.id}`,
-      email,
-      name,
-      emailVerified: true,
-      provider: "shopify"
-    });
+    const identity = normalizeShopifyCustomer(customer);
 
     // STEP 4: Generate Zendesk JWT
 
