@@ -1,5 +1,8 @@
+import crypto from "crypto";
 import { createZendeskJWT } from "../../lib/zendesk/jwt.js";
 import { normalizeShopifyCustomer } from "../../lib/identity/shopify.js";
+import { createSessionData } from "../../lib/session/session.js";
+import { saveSession } from "../../lib/session/store.js";
 
 export default async function handler(req, res) {
   res.setHeader(
@@ -166,6 +169,20 @@ try {
      // STEP 3: Normalize Shopify identity
 
     const identity = normalizeShopifyCustomer(customer);
+    const sessionData = createSessionData(identity);
+    const sessionId = crypto.randomBytes(32).toString("hex");
+
+    await saveSession(
+    sessionId,
+    sessionData,
+    60 * 60 * 24
+    );
+
+    res.setHeader(
+      "Set-Cookie",
+      `session_id=${sessionId}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24}`
+    );
+
 
     // STEP 4: Generate Zendesk JWT
 
