@@ -184,8 +184,7 @@ try {
 
 
     return res.status(200).json({
-      success: true,
-      token
+      success: true
     });
 
   } catch (error) {
