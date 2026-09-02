@@ -1,3 +1,6 @@
+import { normalizeIdentity } from "../../lib/identity/normalize.js";
+import { createZendeskJWT } from "../../lib/zendesk/jwt.js";
+
 export default async function handler(req, res) {
   res.setHeader(
     "Access-Control-Allow-Origin",
@@ -30,7 +33,6 @@ export default async function handler(req, res) {
         error: "Missing code, code_verifier, or redirect_uri"
       });
     }
-
     // --------------------------------------------------
     // STEP 1: Exchange authorization code for access token
     // --------------------------------------------------
@@ -161,19 +163,29 @@ try {
       });
     }
 
-    // --------------------------------------------------
-    // STEP 3: Temporary verification response
-    // --------------------------------------------------
+        // STEP 3: Normalize Shopify identity
+
+    const email = customer.emailAddress?.emailAddress || null;
+
+    const name = [customer.firstName, customer.lastName]
+      .filter(Boolean)
+      .join(" ") || email;
+
+    const identity = normalizeIdentity({
+      externalId: `shopify_${customer.id}`,
+      email,
+      name,
+      emailVerified: true,
+      provider: "shopify"
+    });
+
+    // STEP 4: Generate Zendesk JWT
+
+    const token = createZendeskJWT(identity);
 
     return res.status(200).json({
       success: true,
-      state,
-      customer: {
-        id: customer.id,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.emailAddress?.emailAddress || null
-      }
+      token
     });
 
   } catch (error) {
